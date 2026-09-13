@@ -15,6 +15,11 @@ services:
       - mysql_data:/var/lib/mysql
     networks:
       - nutrivida-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   backend:
     build:
@@ -28,13 +33,14 @@ services:
       - SPRING_DATASOURCE_USERNAME=nutri_user
       - SPRING_DATASOURCE_PASSWORD=nutri_password
     depends_on:
-      - mysql-db
+      mysql-db:
+        condition: service_healthy
     networks:
       - nutrivida-network
 
   frontend:
     build:
-      context: .
+      context: ./frontend
       dockerfile: Dockerfile
     container_name: nutrivida-frontend
     ports:

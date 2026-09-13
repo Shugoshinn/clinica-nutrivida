@@ -1,0 +1,70 @@
+{
+  "hash": "a8d6bf9c",
+  "configHash": "b5aa6e6e",
+  "lockfileHash": "9a9ac29a",
+  "browserHash": "e88755cd",
+  "optimized": {
+    "@angular/common/http": {
+      "src": "../../../../../../node_modules/@angular/common/fesm2022/http.mjs",
+      "file": "@angular_common_http.js",
+      "fileHash": "7fb61694",
+      "needsInterop": false
+    },
+    "@angular/core": {
+      "src": "../../../../../../node_modules/@angular/core/fesm2022/core.mjs",
+      "file": "@angular_core.js",
+      "fileHash": "906f6ded",
+      "needsInterop": false
+    },
+    "@angular/forms": {
+      "src": "../../../../../../node_modules/@angular/forms/fesm2022/forms.mjs",
+      "file": "@angular_forms.js",
+      "fileHash": "7ca7f9a7",
+      "needsInterop": false
+    },
+    "@angular/platform-browser": {
+      "src": "../../../../../../node_modules/@angular/platform-browser/fesm2022/platform-browser.mjs",
+      "file": "@angular_platform-browser.js",
+      "fileHash": "273b4fae",
+      "needsInterop": false
+    },
+    "@angular/router": {
+      "src": "../../../../../../node_modules/@angular/router/fesm2022/router.mjs",
+      "file": "@angular_router.js",
+      "fileHash": "adc9a517",
+      "needsInterop": false
+    },
+    "zone.js": {
+      "src": "../../../../../../node_modules/zone.js/fesm2015/zone.js",
+      "file": "zone__js.js",
+      "fileHash": "03b0ea77",
+      "needsInterop": true
+    }
+  },
+  "chunks": {
+    "_platform_location-chunk-7zp-fpxp": {
+      "file": "_platform_location-chunk-7zp-fpxp.js",
+      "isDynamicEntry": false
+    },
+    "common-T6-TzX4C": {
+      "file": "common-T6-TzX4C.js",
+      "isDynamicEntry": false
+    },
+    "core-CK5_Em9Y": {
+      "file": "core-CK5_Em9Y.js",
+      "isDynamicEntry": false
+    },
+    "createObject-tZtuooBD": {
+      "file": "createObject-tZtuooBD.js",
+      "isDynamicEntry": false
+    },
+    "http-OHs4L8WU": {
+      "file": "http-OHs4L8WU.js",
+      "isDynamicEntry": false
+    },
+    "platform-browser-Btw7Bs01": {
+      "file": "platform-browser-Btw7Bs01.js",
+      "isDynamicEntry": false
+    }
+  }
+}
