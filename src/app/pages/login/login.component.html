@@ -1,0 +1,25 @@
+<main class="IniciarSesion container my-5">
+        <div class="row justify-content-center w-100 m-0">
+            <div class="col-12 col-md-8 col-lg-5">
+                <div class="tarjeta-login">
+                    <h2>Iniciar sesión</h2>
+
+                    <form id="form-login">
+                        <div class="formularioIniciarSesion mb-3">
+                            <label for="correo">Correo electrónico</label>
+                            <input type="email" name="correo" id="correo" class="form-control" placeholder="ejemplo@dominio.com" required/>
+                            <span class="error" id="error-correo"></span>
+                        </div>
+
+                        <div class="formularioIniciarSesion mb-4">
+                            <label for="contrasena">Contraseña</label>
+                            <input type="password" name="contrasena" id="contrasena" class="form-control" placeholder="••••••••" required minlength="3"/>
+                            <span class="error" id="error-contrasena"></span>
+                        </div>
+
+                        <button type="submit" class="btn-ingresar">Ingresar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>

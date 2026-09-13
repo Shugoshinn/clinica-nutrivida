@@ -1,0 +1,78 @@
+main.IniciarSesion {
+    min-height: calc(100vh - 420px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.tarjeta-login {
+    background-color: #ffffff;
+    padding: 35px 30px;
+    border-radius: 24px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+    width: 100%;
+}
+
+.IniciarSesion h2 {
+    color: var(--color-principal);
+    margin: 0 0 20px 0;
+    text-align: center;
+    font-size: 28.8px;
+    font-weight: bold;
+}
+
+.formularioIniciarSesion {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.formularioIniciarSesion label {
+    color: #1e293b;
+    font-weight: 600;
+    font-size: 15.2px;
+}
+
+.formularioIniciarSesion .form-control {
+    padding: 12px 15px;
+    border: 2px solid #cbd5e1;
+    border-radius: 12px;
+    font-size: 16px;
+    color: #1e293b;
+    background-color: #ffffff;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.formularioIniciarSesion .form-control:focus {
+    outline: none;
+    border-color: var(--color-principal);
+    box-shadow: 0 0 0 3px rgba(9, 153, 74, 0.15);
+}
+
+.error {
+    color: #d9534f;
+    font-size: 13.6px;
+    font-weight: 500;
+    min-height: 1.2em;
+    display: block;
+}
+
+.btn-ingresar {
+    background-color: var(--color-boton);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 30px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 10px;
+    width: 100%;
+}
+
+.btn-ingresar:hover {
+    filter: brightness(1.08);
+    transform: translateY(-2px);
+    color: white;
+}
