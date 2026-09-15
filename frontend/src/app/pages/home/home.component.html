@@ -1,139 +1,194 @@
-<main class="contenedor-principal">
-        <section class="container my-4">
-            <div class="seccion-titulo text-center mb-3">
-                <h2>Conoce nuestros servicios</h2>
-                <p>Aquí encontrarás todos los servicios que trae nuestra clínica</p>
+<!-- Encabezado Principal -->
+<header class="header-principal">
+  <div class="logo-container">
+    <h1>Clínica NutriVida</h1>
+  </div>
+  
+  <div class="search-container">
+    <input type="text" placeholder="¿Qué estás buscando?">
+  </div>
+
+  <nav class="nav-menu">
+    <a href="#servicios">Servicios</a>
+    <a href="#mapa">Ubicación</a>
+    <a href="#reservas" *ngIf="isLoggedIn">Reservar hora</a>
+  </nav>
+
+  <div class="auth-container">
+    <button *ngIf="!isLoggedIn" (click)="iniciarSesion()" class="btn-azure">
+      Iniciar Sesión con Microsoft
+    </button>
+    <div *ngIf="isLoggedIn" class="user-welcome">
+      <span>Hola, <b>{{ userName }}</b> (Rol: <span class="role-badge">{{ userRole }}</span>)</span>
+      <button (click)="cerrarSesion()" class="btn-logout">Cerrar Sesión</button>
+    </div>
+  </div>
+</header>
+
+<main class="main-content">
+  
+  <!-- Sección: Conoce nuestros servicios -->
+  <section id="servicios" class="services-section">
+    <div class="section-title">
+      <h2>Conoce nuestros servicios</h2>
+      <p>Aquí encontrarás todos los servicios que trae nuestra clínica</p>
+    </div>
+
+    <div class="services-grid">
+      <div class="service-card">
+        <h3>Pérdida de peso</h3>
+        <p>Asesoría personalizada</p>
+      </div>
+      <div class="service-card">
+        <h3>Enfermedades metabólicas</h3>
+        <p>Conoce más de tu cuerpo</p>
+      </div>
+      <div class="service-card">
+        <h3>Nutrición deportiva</h3>
+        <p>Planes enfocados en el rendimiento físico</p>
+      </div>
+      <div class="service-card">
+        <h3>Alimentación veggie/vegetariana</h3>
+        <p>Planes nutricionales</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Panel Exclusivo para Nutricionistas (Si está logueado como Nutricionista) -->
+  <section *ngIf="isLoggedIn && userRole === 'Nutricionista'" class="nutri-panel-section">
+    <div class="section-title">
+      <h2>Panel de Nutricionista</h2>
+      <p>Fichas Nutricionales de tus pacientes</p>
+    </div>
+
+    <div *ngIf="fichas.length === 0" class="no-data-card">
+      <p>No hay fichas registradas todavía en la base de datos.</p>
+    </div>
+
+    <div class="table-responsive" *ngIf="fichas.length > 0">
+      <table class="fichas-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Paciente</th>
+            <th>Diagnóstico</th>
+            <th>Observaciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let ficha of fichas">
+            <td>{{ ficha.id }}</td>
+            <td>{{ ficha.pacienteNombre }}</td>
+            <td>{{ ficha.diagnostico }}</td>
+            <td>{{ ficha.observaciones }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Sección de Reservas (Aparece cuando inicia sesión) -->
+  <section id="reservas" class="reservation-container" *ngIf="isLoggedIn">
+    <div class="reserva-card-wrapper">
+      <div class="reserva-form-box">
+        <h2>¡Reserva ahora YA!</h2>
+        <form (ngSubmit)="onSubmit()">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Tipo de Atención</label>
+              <select [(ngModel)]="reserva.tipoAtencion" name="tipoAtencion" required>
+                <option value="">Seleccione...</option>
+                <option value="Control">Control</option>
+                <option value="Primera vez">Primera vez</option>
+              </select>
             </div>
-
-            <div class="row g-3 grid-servicios">
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <article class="tarjeta-servicio">
-                        <h3>Pérdida de peso</h3>
-                        <p>Asesoría personalizada</p>
-                    </article>
-                </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <article class="tarjeta-servicio">
-                        <h3>Enfermedades metabólicas</h3>
-                        <p>Conoce más de tu cuerpo</p>
-                    </article>
-                </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <article class="tarjeta-servicio">
-                        <h3>Nutrición deportiva</h3>
-                        <p>Planes enfocados en el rendimiento físico</p>
-                    </article>
-                </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <article class="tarjeta-servicio">
-                        <h3>Alimentación veggie/vegetariana</h3>
-                        <p>Planes nutricionales</p>
-                    </article>
-                </div>
+            <div class="form-group">
+              <label>Modalidad</label>
+              <select [(ngModel)]="reserva.modalidad" name="modalidad" required>
+                <option value="">Seleccione...</option>
+                <option value="Presencial">Presencial</option>
+                <option value="Online">Online</option>
+              </select>
             </div>
-        </section>
+          </div>
 
-        <section class="seccion-titulo text-center my-4">
-            <h2>Elige vivir bien, elige vivir sano</h2>
-        </section>
-
-        <section class="container my-4 contenedor-reserva">
-            <div class="row g-4 align-items-center">
-                <div class="col-12 col-md-6">
-                    <article class="tarjeta-formulario">
-                        <h2>¡Reserva ahora YA!</h2>
-                        <form (ngSubmit)="onSubmit()">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Tipo de Atención</label>
-                                    <select name="tipoAtencion" [(ngModel)]="reserva.tipoAtencion" required>
-                                        <option value="" disabled selected>Tipo Atención</option>
-                                        <option value="Nutrición General">Nutrición General</option>
-                                        <option value="Nutrición Deportiva">Nutrición Deportiva</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Modalidad</label>
-                                    <select name="modalidad" [(ngModel)]="reserva.modalidad" required>
-                                        <option value="" disabled selected>Modalidad</option>
-                                        <option value="Presencial">Presencial</option>
-                                        <option value="Online">Online</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Fecha</label>
-                                    <input type="date" name="fecha" [(ngModel)]="reserva.fecha" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Hora</label>
-                                    <input type="time" name="hora" [(ngModel)]="reserva.hora" required>
-                                </div>
-                            </div>
-                            <div class="botones-formulario">
-                                <button type="submit" class="btn-reservar">Reservar hora</button>
-                                <button type="button" class="btn-anular">Anular</button>
-                            </div>
-                        </form>
-                    </article>
-                </div>
-
-                <div class="col-12 col-md-6">
-                    <article class="tarjeta-imagen">
-                        <div id="carruselClinica" class="carousel slide" data-bs-ride="carousel">
-                            <div class="carousel-indicators">
-                                <button type="button" data-bs-target="#carruselClinica" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
-                                <button type="button" data-bs-target="#carruselClinica" data-bs-slide-to="1" aria-label="Slide 2"></button>
-                                <button type="button" data-bs-target="#carruselClinica" data-bs-slide-to="2" aria-label="Slide 3"></button>
-                            </div>
-
-                            <div class="carousel-inner">
-                                <div class="carousel-item active">
-                                    <img src="assets/img/images.jpg" class="d-block w-100" alt="Instalaciones de la clínica">
-                                </div>
-                                <div class="carousel-item">
-                                    <img src="assets/img/foto2index.jpg" class="d-block w-100" alt="Atención personalizada">
-                                </div>
-                                <div class="carousel-item">
-                                    <img src="assets/img/imagen3index.jpg" class="d-block w-100" alt="Evaluación nutricional">
-                                </div>
-                            </div>
-
-                            <button class="carousel-control-prev" type="button" data-bs-target="#carruselClinica" data-bs-slide="prev">
-                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                                <span class="visually-hidden">Anterior</span>
-                            </button>
-                            <button class="carousel-control-next" type="button" data-bs-target="#carruselClinica" data-bs-slide="next">
-                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                                <span class="visually-hidden">Siguiente</span>
-                            </button>
-                        </div>
-                    </article>
-                </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Fecha</label>
+              <input type="date" [(ngModel)]="reserva.fecha" name="fecha" required>
             </div>
-        </section>
-
-        <section class="container my-4 contenedor-ubicacion">
-            <div class="seccion-titulo text-center mb-3">
-                <h2>Nuestra ubicación</h2>
-                <p>Encuéntranos en Temuco, Región de La Araucanía</p>
+            <div class="form-group">
+              <label>Hora</label>
+              <input type="time" [(ngModel)]="reserva.hora" name="hora" required>
             </div>
+          </div>
 
-            <div class="row g-4 align-items-center">
-                <div class="col-12 col-md-5">
-                    <article class="tarjeta-ubicacion detalle-contacto">
-                        <p><strong>Dirección:</strong> Av. Alemania 0281, Temuco</p>
-                        <p><strong>Horario:</strong> Lunes a sábado de 09:00 a 20:00 hrs.</p>
-                        <p><strong>Teléfono:</strong> +56 9 1234 5678</p>
-                    </article>
-                </div>
+          <div class="form-actions">
+            <button type="submit" class="btn-reservar">Reservar hora</button>
+            <button type="reset" class="btn-anular">Anular</button>
+          </div>
+        </form>
+      </div>
+      
+      <div class="reserva-image-box">
+        <h3>Instalaciones de la clínica</h3>
+        <!-- Espacio visual para instalaciones -->
+      </div>
+    </div>
+  </section>
 
-                <div class="col-12 col-md-7">
-                    <article class="tarjeta-mapa ratio ratio-16x9">
-                        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d99600.31571278397!2d-72.68512200540458!3d-38.7290605803464!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x9614d54fd3031fb5%3A0xb4bd7a18e104cbf6!2sClinica%20RedSalud%20Mayor%20de%20Temuco%20-%20Servicios%20de%20Urgencia%2024%20horas!5e0!3m2!1ses!2scl!4v1788279109929!5m2!1ses!2scl" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
-                    </article>
-                </div>
-            </div>
-        </section>
-    </main>
+  <!-- Aviso si no ha iniciado sesión -->
+  <section class="login-prompt-section" *ngIf="!isLoggedIn">
+    <div class="prompt-box">
+      <h3>Inicia sesión con Microsoft para acceder al sistema de reservas o gestión médica.</h3>
+    </div>
+  </section>
+
+  <!-- Sección: Nuestra Ubicación -->
+  <section id="mapa" class="location-section">
+    <div class="section-title">
+      <h2>Nuestra ubicación</h2>
+      <p>Encuéntranos en Temuco, Región de La Araucanía</p>
+    </div>
+
+    <div class="location-content">
+      <div class="location-info">
+        <p><b>Dirección:</b> Av. Alemania 0281, Temuco</p>
+        <p><b>Horario:</b> Lunes a sábado de 09:00 a 20:00 hrs.</p>
+        <p><b>Teléfono:</b> +56 9 1234 5678</p>
+      </div>
+      <div class="map-box">
+        <iframe 
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3119.5!2d-72.59!3d-38.73!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMzjCsDQzJzQ4LjAiUyA3MsKwMzUnMjQuMCJX!5e0!3m2!1ses!2scl!4v1650000000000!5m2!1ses!2scl" 
+          width="100%" 
+          height="350" 
+          style="border:0;" 
+          allowfullscreen="" 
+          loading="lazy">
+        </iframe>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Footer Verde -->
+<footer class="footer-principal">
+  <div class="footer-grid">
+    <div class="footer-col">
+      <h3>¿Quiénes somos?</h3>
+      <p>NutriVida es una clínica de nutrición y dietética fundada en 2016 en Temuco, Región de La Araucanía. Está formada por 4 nutricionistas que atienden pacientes con distintos objetivos: pérdida de peso, control de enfermedades metabólicas, nutrición deportiva y alimentación vegetariana o vegana.</p>
+    </div>
+    <div class="footer-col">
+      <h3>Redes sociales</h3>
+      <ul>
+        <li>Facebook</li>
+        <li>Instagram</li>
+        <li>X / Twitter</li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2026 Clínica Nutricional NutriVida. Todos los derechos reservados.</p>
+  </div>
+</footer>

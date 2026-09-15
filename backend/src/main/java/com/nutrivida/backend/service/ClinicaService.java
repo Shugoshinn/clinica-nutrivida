@@ -24,12 +24,12 @@ public class ClinicaService {
     public Reserva guardarReserva(Reserva reserva) {
         LocalDate hoy = LocalDate.now();
         
-        // Validación de fecha no anterior al día actual[cite: 6]
+        // Validación de fecha no anterior al día actual
         if (reserva.getFecha().isBefore(hoy)) {
             throw new IllegalArgumentException("La fecha de reserva no puede ser en el pasado.");
         }
 
-        // Validación de horario permitido entre las 09:00 y las 20:00 hrs[cite: 6]
+        // Validación de horario permitido entre las 09:00 y las 20:00 hrs
         int horaReserva = reserva.getHora().getHour();
         if (horaReserva < 9 || horaReserva >= 20) {
             throw new IllegalArgumentException("El horario de atención es de 09:00 a 20:00 hrs.");
@@ -56,5 +56,9 @@ public class ClinicaService {
 
     public FichaNutricional guardarFicha(FichaNutricional ficha) {
         return fichaRepository.save(ficha);
+    }
+
+    public List<FichaNutricional> listarFichas() {
+        return fichaRepository.findAll();
     }
 }

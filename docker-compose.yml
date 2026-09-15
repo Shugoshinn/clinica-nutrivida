@@ -6,7 +6,7 @@ services:
     container_name: nutrivida-mysql
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: nutrivida_db
+      MYSQL_DATABASE: clinica_nutrivida
       MYSQL_USER: nutri_user
       MYSQL_PASSWORD: nutri_password
     ports:

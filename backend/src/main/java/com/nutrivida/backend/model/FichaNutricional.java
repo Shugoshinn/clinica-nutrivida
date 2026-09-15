@@ -2,6 +2,8 @@
 package com.nutrivida.backend.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 @Entity
 @Table(name = "fichas_nutricionales")
@@ -10,9 +12,11 @@ public class FichaNutricional {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "El RUT del paciente es obligatorio")
     private String pacienteRut;
     private String motivoConsulta;
     private String antecedentes;
+    @NotNull(message = "El peso actual es obligatorio")
     private Double pesoActual;
     private Integer estatura;
     private Double grasaCorporal;

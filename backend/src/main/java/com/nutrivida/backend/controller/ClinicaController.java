@@ -7,6 +7,7 @@ import com.nutrivida.backend.service.ClinicaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -44,8 +45,14 @@ public class ClinicaController {
     }
 
     @PostMapping("/fichas")
-    public ResponseEntity<FichaNutricional> guardarFicha(@RequestBody FichaNutricional ficha) {
+    public ResponseEntity<FichaNutricional> guardarFicha(@Valid @RequestBody FichaNutricional ficha) {
         FichaNutricional nuevaFicha = clinicaService.guardarFicha(ficha);
         return ResponseEntity.ok(nuevaFicha);
+    }
+
+    @GetMapping("/fichas")
+    public ResponseEntity<List<FichaNutricional>> listarFichas() {
+        List<FichaNutricional> fichas = clinicaService.listarFichas();
+        return ResponseEntity.ok(fichas);
     }
 }
