@@ -6,12 +6,24 @@ import { Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class ReservaService {
-  // Esta URL apunta al backend que está corriendo en el puerto 8080
-  private apiUrl = 'http://localhost:8080/api/reservas';
+  // Esta URL ahora apunta a tu backend alojado en AWS
+  private apiUrl = 'http://api-nutrivida-v2.us-east-1.elasticbeanstalk.com/api/reservas';
 
   constructor(private http: HttpClient) { }
 
   crearReserva(reserva: any): Observable<any> {
     return this.http.post(this.apiUrl, reserva);
+  }
+
+  obtenerReservas(): Observable<any[]> {
+    return this.http.get<any[]>(this.apiUrl);
+  }
+
+  asignarNutricionista(reserva: any): Observable<any> {
+    // Le asignamos el valor temporal al campo nutricionista del objeto
+    reserva.nutricionista = reserva.nutricionistaTemp;
+    
+    // Hace un PUT a http://.../api/reservas/{id}
+    return this.http.put(`${this.apiUrl}/${reserva.id}`, reserva);
   }
 }

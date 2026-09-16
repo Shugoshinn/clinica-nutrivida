@@ -19,7 +19,7 @@ export function MSALInstanceFactory(): PublicClientApplication {
 export function MSALInterceptorConfigFactory() {
   const protectedResourceMap = new Map<string, Array<string>>();
   // Cada vez que Angular llame a la API del backend, adjuntará el token automáticamente
-  protectedResourceMap.set('http://localhost:8080/api/', ['user.read']);
+  protectedResourceMap.set('http://api-nutrivida-v2.us-east-1.elasticbeanstalk.com/api/', ['user.read']);
 
   return {
     interactionType: InteractionType.Popup,

@@ -8,7 +8,7 @@
     <input type="text" placeholder="¿Qué estás buscando?">
   </div>
 
-  <nav class="nav-menu">
+  <nav class="nav-menu" *ngIf="userRole !== 'Nutricionista'">
     <a href="#servicios">Servicios</a>
     <a href="#mapa">Ubicación</a>
     <a href="#reservas" *ngIf="isLoggedIn">Reservar hora</a>
@@ -16,7 +16,7 @@
 
   <div class="auth-container">
     <button *ngIf="!isLoggedIn" (click)="iniciarSesion()" class="btn-azure">
-      Iniciar Sesión con Microsoft
+      Registrarse / Iniciar Sesión
     </button>
     <div *ngIf="isLoggedIn" class="user-welcome">
       <span>Hola, <b>{{ userName }}</b> (Rol: <span class="role-badge">{{ userRole }}</span>)</span>
@@ -27,8 +27,8 @@
 
 <main class="main-content">
   
-  <!-- Sección: Conoce nuestros servicios -->
-  <section id="servicios" class="services-section">
+  <!-- Sección: Conoce nuestros servicios (Oculto para Nutricionista y Secretaria) -->
+  <section id="servicios" class="services-section" *ngIf="userRole !== 'Nutricionista' && userRole !== 'Secretaria'">
     <div class="section-title">
       <h2>Conoce nuestros servicios</h2>
       <p>Aquí encontrarás todos los servicios que trae nuestra clínica</p>
@@ -54,15 +54,25 @@
     </div>
   </section>
 
-  <!-- Panel Exclusivo para Nutricionistas (Si está logueado como Nutricionista) -->
-  <section class="nutri-panel-section"> <!-- Consejo: Si quieres probar sin loguearte, puedes quitar temporalmente el *ngIf -->
+  <!-- Panel Exclusivo para Nutricionistas -->
+  <section *ngIf="isLoggedIn && userRole === 'Nutricionista'" class="nutri-panel-section">
     <div class="section-title">
       <h2>Panel de Nutricionista</h2>
-      <p>Fichas Nutricionales de tus pacientes</p>
+      <p>Gestión de pacientes y fichas nutricionales</p>
     </div>
 
-    <div *ngIf="fichas.length === 0" class="no-data-card">
-      <p>No hay fichas registradas todavía en la base de datos.</p>
+    <!-- Formulario para crear ficha -->
+    <div class="form-container" style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+      <h3>Crear Nueva Ficha</h3>
+      <form (ngSubmit)="guardarFicha()">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <input type="text" [(ngModel)]="nuevaFicha.pacienteRut" name="rut" placeholder="RUT del paciente (Ej: 11.111.111-1)" required class="form-control">
+          <input type="text" [(ngModel)]="nuevaFicha.motivoConsulta" name="motivo" placeholder="Motivo de consulta" required class="form-control">
+          <input type="text" [(ngModel)]="nuevaFicha.antecedentes" name="antecedentes" placeholder="Antecedentes médicos" class="form-control">
+          <input type="number" [(ngModel)]="nuevaFicha.pesoActual" name="peso" placeholder="Peso actual (kg)" required class="form-control">
+        </div>
+        <button type="submit" class="btn-reservar" style="margin-top: 15px;">Guardar Ficha en AWS</button>
+      </form>
     </div>
 
     <div class="table-responsive" *ngIf="fichas.length > 0">
@@ -87,8 +97,59 @@
     </div>
   </section>
 
-  <!-- Sección de Reservas (Aparece cuando inicia sesión) -->
-  <section id="reservas" class="reservation-container" *ngIf="isLoggedIn">
+  <!-- ========================================== -->
+  <!-- NUEVO: PANEL DE LA SECRETARIA -->
+  <!-- ========================================== -->
+  <section class="nutri-panel-section" *ngIf="isLoggedIn && userRole === 'Secretaria'">
+    <div class="section-title">
+      <h2>Panel de Recepción (Secretaria)</h2>
+      <p>Gestión y asignación de horas reservadas por pacientes</p>
+      <button (click)="cargarTodasLasReservas()" class="btn-reservar" style="margin-top: 10px;">Actualizar Lista de Reservas</button>
+    </div>
+
+    <div class="table-responsive">
+      <table class="fichas-table">
+        <thead>
+          <tr>
+            <th>Paciente</th>
+            <th>Fecha</th>
+            <th>Hora</th>
+            <th>Tipo de Atención</th>
+            <th>Nutricionista Asignado</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let res of listaReservas">
+            <td>{{ res.pacienteNombre }}</td>
+            <td>{{ res.fecha }}</td>
+            <td>{{ res.hora }}</td>
+            <td>{{ res.tipoAtencion }}</td>
+            
+            <!-- Selector para asignar médico si no tiene -->
+            <td>
+              <select *ngIf="!res.nutricionista" [(ngModel)]="res.nutricionistaTemp" name="nutri" class="form-control">
+                <option value="">-- Seleccionar --</option>
+                <option value="Dr. Pérez">Dr. Pérez</option>
+                <option value="Dra. Gómez">Dra. Gómez</option>
+              </select>
+              <span *ngIf="res.nutricionista"><b>{{ res.nutricionista }}</b></span>
+            </td>
+
+            <td>
+              <button *ngIf="!res.nutricionista" (click)="asignar(res)" class="btn-reservar" style="padding: 5px 10px; font-size: 14px;">
+                Confirmar
+              </button>
+              <span *ngIf="res.nutricionista" style="color: green; font-weight: bold;">Asignado ✓</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Sección de Reservas (Aparece cuando inicia sesión y es Paciente) -->
+  <section id="reservas" class="reservation-container" *ngIf="isLoggedIn && userRole !== 'Nutricionista' && userRole !== 'Secretaria'">
     <div class="reserva-card-wrapper">
       <div class="reserva-form-box">
         <h2>¡Reserva ahora YA!</h2>
@@ -137,15 +198,8 @@
     </div>
   </section>
 
-  <!-- Aviso si no ha iniciado sesión -->
-  <section class="login-prompt-section" *ngIf="!isLoggedIn">
-    <div class="prompt-box">
-      <h3>Inicia sesión con Microsoft para acceder al sistema de reservas o gestión médica.</h3>
-    </div>
-  </section>
-
   <!-- Sección: Nuestra Ubicación -->
-  <section id="mapa" class="location-section">
+  <section id="mapa" class="location-section" *ngIf="userRole !== 'Nutricionista' && userRole !== 'Secretaria'">
     <div class="section-title">
       <h2>Nuestra ubicación</h2>
       <p>Encuéntranos en Temuco, Región de La Araucanía</p>
