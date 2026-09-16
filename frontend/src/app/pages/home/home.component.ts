@@ -94,6 +94,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       next: (data) => this.fichas = data,
       error: (err) => console.error('Error al cargar fichas:', err)
     });
+    console.log('Fichas cargadas:', this.fichas);
   }
 
   onSubmit() {

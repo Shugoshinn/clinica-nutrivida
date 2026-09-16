@@ -55,7 +55,7 @@
   </section>
 
   <!-- Panel Exclusivo para Nutricionistas (Si está logueado como Nutricionista) -->
-  <section *ngIf="isLoggedIn && userRole === 'Nutricionista'" class="nutri-panel-section">
+  <section class="nutri-panel-section"> <!-- Consejo: Si quieres probar sin loguearte, puedes quitar temporalmente el *ngIf -->
     <div class="section-title">
       <h2>Panel de Nutricionista</h2>
       <p>Fichas Nutricionales de tus pacientes</p>
@@ -70,17 +70,17 @@
         <thead>
           <tr>
             <th>ID</th>
-            <th>Paciente</th>
-            <th>Diagnóstico</th>
-            <th>Observaciones</th>
+            <th>RUT Paciente</th>
+            <th>Motivo de Consulta</th>
+            <th>Antecedentes</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let ficha of fichas">
             <td>{{ ficha.id }}</td>
-            <td>{{ ficha.pacienteNombre }}</td>
-            <td>{{ ficha.diagnostico }}</td>
-            <td>{{ ficha.observaciones }}</td>
+            <td>{{ ficha.pacienteRut }}</td>
+            <td>{{ ficha.motivoConsulta }}</td>
+            <td>{{ ficha.antecedentes }}</td>
           </tr>
         </tbody>
       </table>

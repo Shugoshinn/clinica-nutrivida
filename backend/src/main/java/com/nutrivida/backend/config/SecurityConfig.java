@@ -24,13 +24,13 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
                 // 1. Bloqueamos las Fichas SOLO para Nutricionistas
-                .requestMatchers("/api/fichas/**").hasRole("Nutricionista")
+                .requestMatchers("/api/fichas/**").permitAll() // Cambiado a permitAll() para permitir el acceso sin autenticación
                 
                 // 2. Las Reservas pueden gestionarlas las Secretarias, Pacientes y Nutricionistas
-                .requestMatchers("/api/reservas/**").hasAnyRole("Secretaria", "Paciente", "Nutricionista")
+                .requestMatchers("/api/reservas/**").permitAll() // Cambiado a permitAll() para permitir el acceso sin autenticación
                 
                 // 3. Cualquier otra ruta que exista debe requerir sesión iniciada
-                .anyRequest().authenticated()
+                .anyRequest().permitAll() // Cambiado a permitAll() para permitir el acceso sin autenticación
             )
             // Habilitamos la validación del token de Microsoft (OAuth2/JWT)
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> 
