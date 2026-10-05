@@ -2,6 +2,7 @@
 package com.nutrivida.backend.controller;
 
 import com.nutrivida.backend.model.FichaNutricional;
+import com.nutrivida.backend.model.Nutricionista;
 import com.nutrivida.backend.model.Reserva;
 import com.nutrivida.backend.service.ClinicaService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,5 +55,21 @@ public class ClinicaController {
     public ResponseEntity<List<FichaNutricional>> listarFichas() {
         List<FichaNutricional> fichas = clinicaService.listarFichas();
         return ResponseEntity.ok(fichas);
+    }
+
+    @GetMapping("/nutricionistas")
+    public ResponseEntity<List<Nutricionista>> listarNutricionistas() {
+        return ResponseEntity.ok(clinicaService.listarNutricionistas());
+    }
+
+    @PostMapping("/nutricionistas")
+    public ResponseEntity<Nutricionista> guardarNutricionista(@RequestBody Nutricionista nutricionista) {
+        return ResponseEntity.ok(clinicaService.guardarNutricionista(nutricionista));
+    }
+
+    @DeleteMapping("/nutricionistas/{id}")
+    public ResponseEntity<Void> eliminarNutricionista(@PathVariable Long id) {
+        clinicaService.eliminarNutricionista(id);
+        return ResponseEntity.noContent().build();
     }
 }

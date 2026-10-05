@@ -2,8 +2,10 @@
 package com.nutrivida.backend.service;
 
 import com.nutrivida.backend.model.FichaNutricional;
+import com.nutrivida.backend.model.Nutricionista;
 import com.nutrivida.backend.model.Reserva;
 import com.nutrivida.backend.repository.FichaRepository;
+import com.nutrivida.backend.repository.NutricionistaRepository;
 import com.nutrivida.backend.repository.ReservaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,9 @@ public class ClinicaService {
     @Autowired
     private FichaRepository fichaRepository;
 
+    @Autowired
+    private NutricionistaRepository nutricionistaRepository;
+
     public Reserva guardarReserva(Reserva reserva) {
         LocalDate hoy = LocalDate.now();
         
@@ -30,8 +35,8 @@ public class ClinicaService {
         }
 
         // Validación de horario permitido entre las 09:00 y las 20:00 hrs
-        int horaReserva = reserva.getHora().getHour();
-        if (horaReserva < 9 || horaReserva >= 20) {
+        LocalTime horaReserva = reserva.getHora();
+        if (horaReserva.isBefore(LocalTime.of(9, 0)) || horaReserva.isAfter(LocalTime.of(20, 0))) {
             throw new IllegalArgumentException("El horario de atención es de 09:00 a 20:00 hrs.");
         }
 
@@ -60,5 +65,17 @@ public class ClinicaService {
 
     public List<FichaNutricional> listarFichas() {
         return fichaRepository.findAll();
+    }
+
+    public List<Nutricionista> listarNutricionistas() {
+        return nutricionistaRepository.findAll();
+    }
+
+    public Nutricionista guardarNutricionista(Nutricionista nutricionista) {
+        return nutricionistaRepository.save(nutricionista);
+    }
+
+    public void eliminarNutricionista(Long id) {
+        nutricionistaRepository.deleteById(id);
     }
 }
