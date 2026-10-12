@@ -1,4 +1,6 @@
-const apiUrl = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
+import { msalInstance } from './auth';
+
+const apiUrl = 'https://zphgtogiuc.execute-api.us-east-1.amazonaws.com/prod';
 
 export interface Reserva {
   id?: number;
@@ -34,7 +36,35 @@ async function request<T>(
   const headers = new Headers(init?.headers);
   headers.set('Content-Type', 'application/json');
 
+  // 1. Obtener la sesión actual del usuario
+  const accounts = msalInstance.getAllAccounts();
+  
+  if (accounts.length > 0) {
+    try {
+      // 2. Solicitar el token de manera silenciosa
+      const tokenResponse = await msalInstance.acquireTokenSilent({
+        scopes: ["api://db5f13af-8b1a-4d80-9944-17ea6ff024cf/access_as_user"],
+        account: accounts[0]
+      });
+      
+      // 3. Adjuntar el JWT en la cabecera Authorization
+      headers.set('Authorization', `Bearer ${tokenResponse.accessToken}`);
+    } catch (error) {
+      console.warn("Fallo el token silencioso, abriendo ventana para consentimiento...", error);
+      try {
+        // 4. RESPALDO INTERACTIVO: Si falta consentimiento, abre el popup de Azure
+        const tokenResponse = await msalInstance.acquireTokenPopup({
+          scopes: ["api://db5f13af-8b1a-4d80-9944-17ea6ff024cf/access_as_user"]
+        });
+        headers.set('Authorization', `Bearer ${tokenResponse.accessToken}`);
+      } catch (popupError) {
+        console.error("Error crítico obteniendo el token JWT por popup:", popupError);
+      }
+    }
+  }
+
   const response = await fetch(`${apiUrl}/api${path}`, { ...init, headers });
+  
   if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}`);
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;

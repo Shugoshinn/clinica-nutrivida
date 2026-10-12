@@ -30,7 +30,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/reservas/**").permitAll() // Cambiado a permitAll() para permitir el acceso sin autenticación
                 
                 // 3. Cualquier otra ruta que exista debe requerir sesión iniciada
-                .anyRequest().permitAll() // Cambiado a permitAll() para permitir el acceso sin autenticación
+                .anyRequest().authenticated() // Cambiado a permitAll() para permitir el acceso sin autenticación
             )
             // Habilitamos la validación del token de Microsoft (OAuth2/JWT)
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> 
