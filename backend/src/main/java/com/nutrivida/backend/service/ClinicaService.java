@@ -1,4 +1,3 @@
-// src/main/java/com/nutrivida/backend/service/ClinicaService.java
 package com.nutrivida.backend.service;
 
 import com.nutrivida.backend.model.FichaNutricional;
@@ -26,6 +25,10 @@ public class ClinicaService {
     @Autowired
     private NutricionistaRepository nutricionistaRepository;
 
+    // 1. Inyectamos tu productor de RabbitMQ
+    @Autowired
+    private ReservaProducer reservaProducer;
+
     public Reserva guardarReserva(Reserva reserva) {
         LocalDate hoy = LocalDate.now();
         
@@ -40,7 +43,15 @@ public class ClinicaService {
             throw new IllegalArgumentException("El horario de atención es de 09:00 a 20:00 hrs.");
         }
 
-        return reservaRepository.save(reserva);
+        // 2. Guardamos la reserva en la base de datos
+        Reserva reservaGuardada = reservaRepository.save(reserva);
+
+        // 3. Disparamos el mensaje a RabbitMQ usando tu productor
+        String mensaje = "Nueva reserva creada para el paciente: " + reservaGuardada.getPacienteNombre() 
+                       + " con el especialista " + reservaGuardada.getNutricionistaNombre();
+        reservaProducer.enviarNotificacionReserva(mensaje);
+
+        return reservaGuardada;
     }
 
     public Reserva reagendarReserva(Long id, Reserva nuevosDatos) {
@@ -52,6 +63,7 @@ public class ClinicaService {
         reserva.setModalidad(nuevosDatos.getModalidad());
         reserva.setNutricionistaNombre(nuevosDatos.getNutricionistaNombre());
         
+        // Al llamar a guardarReserva, también disparará un mensaje a RabbitMQ por el reagendamiento
         return guardarReserva(reserva);
     }
 

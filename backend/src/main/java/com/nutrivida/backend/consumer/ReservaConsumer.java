@@ -12,7 +12,7 @@ import java.io.IOException;
 @Component
 public class ReservaConsumer {
 
-    @RabbitListener(queues = RabbitMQConfig.RESERVA_QUEUE)
+    @RabbitListener(queues = "${rabbitmq.queue.reserva.main}")
     public void recibirNotificacionReserva(String mensaje, Channel channel, @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws IOException {
         try {
             System.out.println("[✔] Mensaje recibido en el consumidor del backend: " + mensaje);
