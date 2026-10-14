@@ -23,14 +23,15 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                // 1. Bloqueamos las Fichas SOLO para Nutricionistas
-                .requestMatchers("/api/fichas/**").permitAll() // Cambiado a permitAll() para permitir el acceso sin autenticación
+                // 1. LA SOLUCIÓN AL ERROR: Permitimos las peticiones OPTIONS (Preflight de CORS) sin seguridad
+                .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 
-                // 2. Las Reservas pueden gestionarlas las Secretarias, Pacientes y Nutricionistas
-                .requestMatchers("/api/reservas/**").permitAll() // Cambiado a permitAll() para permitir el acceso sin autenticación
+                // 2. VUELVE A ACTIVAR LA SEGURIDAD para tus rutas (¡Vital para la defensa!)
+                .requestMatchers("/api/fichas/**").authenticated()
+                .requestMatchers("/api/reservas/**").authenticated()
                 
                 // 3. Cualquier otra ruta que exista debe requerir sesión iniciada
-                .anyRequest().authenticated() // Cambiado a permitAll() para permitir el acceso sin autenticación
+                .anyRequest().authenticated()
             )
             // Habilitamos la validación del token de Microsoft (OAuth2/JWT)
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> 

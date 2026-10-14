@@ -101,6 +101,7 @@ function HomePage() {
   const [notice, setNotice] = useState('');
   const [reserva, setReserva] = useState<Reserva>({ tipoAtencion: '', modalidad: '', fecha: '', hora: '', pacienteNombre: '' });
   const [nuevaFicha, setNuevaFicha] = useState<Ficha>({ pacienteRut: '', motivoConsulta: '', antecedentes: '', pesoActual: null });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     clinicApi.fichas()
@@ -135,11 +136,14 @@ function HomePage() {
 
   async function submitReservation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isSubmitting) return;
+
     const today = new Date();
     const localToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     if (reserva.fecha < localToday) return setNotice('No puedes agendar una hora en el pasado. Elige una fecha a partir de hoy.');
     if (reserva.hora < '09:00' || reserva.hora > '20:00') return setNotice('El horario de atención es entre las 09:00 y las 20:00 hrs.');
 
+    setIsSubmitting(true);
     try {
       await clinicApi.crearReserva(reserva);
       setNotice('¡Tu hora ha sido agendada con éxito!');
@@ -147,6 +151,8 @@ function HomePage() {
     } catch (error) {
       console.error('Error al guardar la reserva:', error);
       setNotice('Hubo un problema al agendar tu hora. Intenta nuevamente.');
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -218,7 +224,12 @@ function HomePage() {
                 <label>Fecha<input required type="date" min={new Date().toISOString().slice(0, 10)} value={reserva.fecha} onChange={(event) => setReserva({ ...reserva, fecha: event.target.value })} /></label>
                 <label>Hora<input required type="time" min="09:00" max="20:00" value={reserva.hora} onChange={(event) => setReserva({ ...reserva, hora: event.target.value })} /></label>
               </div>
-              <div className="form-actions"><button className="button button-green" type="submit">Reservar hora <span>↗</span></button><button className="button button-text" type="reset" onClick={() => setReserva({ tipoAtencion: '', modalidad: '', fecha: '', hora: '', pacienteNombre: userName })}>Limpiar</button></div>
+              <div className="form-actions">
+                <button className="button button-green" type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Procesando...' : 'Reservar hora'} <span>↗</span>
+                </button>
+                <button className="button button-text" type="reset" onClick={() => setReserva({ tipoAtencion: '', modalidad: '', fecha: '', hora: '', pacienteNombre: userName })}>Limpiar</button>
+              </div>
             </form>
           </section>}
 

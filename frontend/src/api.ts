@@ -67,7 +67,14 @@ async function request<T>(
   
   if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}`);
   if (response.status === 204) return undefined as T;
-  return response.json() as Promise<T>;
+
+  // Tolerante a respuestas en texto plano (RabbitMQ) y JSON
+  const text = await response.text();
+  try {
+    return text ? (JSON.parse(text) as T) : (undefined as T);
+  } catch (error) {
+    return text as unknown as T;
+  }
 }
 
 export const clinicApi = {
