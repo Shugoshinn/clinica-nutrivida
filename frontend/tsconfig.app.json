@@ -18,5 +18,6 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/main.tsx", "src/App.tsx", "src/auth.ts", "src/api.ts"]
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
 }

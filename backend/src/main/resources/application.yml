@@ -1,0 +1,117 @@
+server:
+  port: ${SERVER_PORT:5000}
+
+spring:
+  application:
+    name: nutrivida-backend
+
+  # --- Base de datos cloud (AWS RDS MySQL) ---
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://nutrivida-db.ceqlr0xedpg5.us-east-1.rds.amazonaws.com:3306/nutrivida?allowPublicKeyRetrieval=true&useSSL=false}
+    username: ${SPRING_DATASOURCE_USERNAME:admin}
+    password: ${SPRING_DATASOURCE_PASSWORD:Jleon210.}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  # --- Validación del JWT emitido por Azure Entra ID (IDaaS) ---
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: https://login.microsoftonline.com/${app.security.tenant-id}/discovery/v2.0/keys
+
+  # --- Conexión al clúster RabbitMQ (EC2 por defecto, docker-compose vía variables) ---
+  rabbitmq:
+    addresses: ${SPRING_RABBITMQ_ADDRESSES:3.84.123.87:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:admin}
+    password: ${SPRING_RABBITMQ_PASSWORD:admin123}
+    listener:
+      simple:
+        # Confirmación explícita (ACK/NACK) en los consumidores
+        acknowledge-mode: manual
+        default-requeue-rejected: false
+
+  # --- Cliente Kafka (coexiste con RabbitMQ; solo se activa con app.kafka.enabled=true) ---
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092,localhost:9093}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+      properties:
+        enable.idempotence: true
+        max.block.ms: 5000
+        delivery.timeout.ms: 30000
+    consumer:
+      group-id: ${app.kafka.consumer-groups.reservas}
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        # Cada @KafkaListener indica su DTO (spring.json.value.default.type) y se ignoran los headers de tipo
+        spring.json.use.type.headers: false
+        spring.json.trusted.packages: com.nutrivida.backend.messaging.event
+    listener:
+      ack-mode: record
+
+app:
+  # --- Tenant / aplicación registrada en Azure Entra ID ---
+  security:
+    tenant-id: ${AZURE_TENANT_ID:9188040d-6c67-4c5b-b112-36a304b66dad}
+    client-id: ${AZURE_CLIENT_ID:db5f13af-8b1a-4d80-9944-17ea6ff024cf}
+    # Emisores (iss) aceptados: tokens v2.0 y v1.0 del tenant
+    issuers:
+      - https://login.microsoftonline.com/${app.security.tenant-id}/v2.0
+      - https://sts.windows.net/${app.security.tenant-id}/
+    # Audiencias (aud) aceptadas: Application ID URI y Client ID de la API
+    audiences:
+      - api://${app.security.client-id}
+      - ${app.security.client-id}
+    # Rol asignado cuando el token no trae claim "roles" ni coincide con role-mappings
+    default-role: Paciente
+    # Respaldo para cuentas personales de Microsoft sin App Roles asignados (claim email / preferred_username)
+    role-mappings:
+      "[becerrajohan34@gmail.com]": Nutricionista
+      "[luis.concha.d5@gmail.com]": Secretaria
+      "[nicolasxd08@gmail.com]": Administrador
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost,http://localhost:4200,http://localhost:5173}
+
+  # --- Kafka: tópicos y consumer groups centralizados ---
+  kafka:
+    enabled: ${APP_KAFKA_ENABLED:false}
+    replication-factor: ${APP_KAFKA_REPLICATION_FACTOR:2}
+    # Caso de uso 1: reservas -> notificación al paciente
+    # Caso de uso 2: fichas nutricionales -> evaluación nutricional (IMC)
+    topics:
+      reservas: clinica.reservas.eventos
+      reservas-dlt: clinica.reservas.eventos.DLT
+      fichas: clinica.fichas.eventos
+      fichas-dlt: clinica.fichas.eventos.DLT
+    consumer-groups:
+      reservas: nutrivida-reservas-group
+      fichas: nutrivida-fichas-group
+      dlt: nutrivida-dlt-group
+    retry:
+      max-attempts: 3
+      initial-interval-ms: 1000
+      multiplier: 2.0
+
+# --- Configuración centralizada de RabbitMQ (colas, exchanges y bindings) ---
+rabbitmq:
+  queue:
+    reserva:
+      main: clinica.reserva.queue
+      dlq: clinica.reserva.dlq
+  exchange:
+    reserva:
+      main: clinica.reserva.exchange
+      dlx: clinica.reserva.dlx
+  routing:
+    reserva:
+      main: reserva.routing.key
+      dlq: reserva.dlq.routing.key

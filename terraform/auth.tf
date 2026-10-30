@@ -5,9 +5,10 @@ resource "aws_apigatewayv2_authorizer" "jwt_azure" {
   name             = "AzureEntraID-Authorizer"
 
   jwt_configuration {
-    audience = [var.azure_client_id] # El Application ID del backend[cite: 1]
-    
+    # Tokens v2.0 traen aud = <client id>; v1.0 traen aud = api://<client id>
+    audience = [var.azure_client_id, "api://${var.azure_client_id}"]
+
     # El valor del Issuer tiene la forma general de Microsoft Entra:
-    issuer   = "https://login.microsoftonline.com/${var.azure_tenant_id}/v2.0" 
+    issuer = "https://login.microsoftonline.com/${var.azure_tenant_id}/v2.0"
   }
 }

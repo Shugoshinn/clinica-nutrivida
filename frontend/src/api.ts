@@ -1,6 +1,8 @@
+import { InteractionRequiredAuthError } from '@azure/msal-browser';
 import { msalInstance } from './auth';
+import { environment } from './environments/environment';
 
-const apiUrl = 'https://zphgtogiuc.execute-api.us-east-1.amazonaws.com/prod';
+export const apiUrl = environment.apiUrl;
 
 export interface Reserva {
   id?: number;
@@ -20,6 +22,10 @@ export interface Ficha {
   motivoConsulta: string;
   antecedentes: string;
   pesoActual: number | null;
+  estatura: number | null;
+  // Calculados de forma asíncrona por el consumidor Kafka de fichas
+  imc?: number | null;
+  clasificacionImc?: string | null;
 }
 
 export interface Nutricionista {
@@ -29,6 +35,23 @@ export interface Nutricionista {
   email: string;
 }
 
+// Obtiene el JWT de Azure AD para la API: primero en silencio y, si requiere interacción, por popup
+export async function getAccessToken(): Promise<string | null> {
+  const account = msalInstance.getActiveAccount() ?? msalInstance.getAllAccounts()[0];
+  if (!account) return null;
+
+  try {
+    const tokenResponse = await msalInstance.acquireTokenSilent({ scopes: environment.apiScopes, account });
+    return tokenResponse.accessToken;
+  } catch (error) {
+    if (!(error instanceof InteractionRequiredAuthError)) throw error;
+    console.warn('Se requiere consentimiento, abriendo ventana de Azure...', error);
+    const tokenResponse = await msalInstance.acquireTokenPopup({ scopes: environment.apiScopes, account });
+    return tokenResponse.accessToken;
+  }
+}
+
+// Cliente HTTP: adjunta el JWT en el header Authorization de cada llamada al backend
 async function request<T>(
   path: string,
   init?: RequestInit
@@ -36,35 +59,13 @@ async function request<T>(
   const headers = new Headers(init?.headers);
   headers.set('Content-Type', 'application/json');
 
-  // 1. Obtener la sesión actual del usuario
-  const accounts = msalInstance.getAllAccounts();
-  
-  if (accounts.length > 0) {
-    try {
-      // 2. Solicitar el token de manera silenciosa
-      const tokenResponse = await msalInstance.acquireTokenSilent({
-        scopes: ["api://db5f13af-8b1a-4d80-9944-17ea6ff024cf/access_as_user"],
-        account: accounts[0]
-      });
-      
-      // 3. Adjuntar el JWT en la cabecera Authorization
-      headers.set('Authorization', `Bearer ${tokenResponse.accessToken}`);
-    } catch (error) {
-      console.warn("Fallo el token silencioso, abriendo ventana para consentimiento...", error);
-      try {
-        // 4. RESPALDO INTERACTIVO: Si falta consentimiento, abre el popup de Azure
-        const tokenResponse = await msalInstance.acquireTokenPopup({
-          scopes: ["api://db5f13af-8b1a-4d80-9944-17ea6ff024cf/access_as_user"]
-        });
-        headers.set('Authorization', `Bearer ${tokenResponse.accessToken}`);
-      } catch (popupError) {
-        console.error("Error crítico obteniendo el token JWT por popup:", popupError);
-      }
-    }
-  }
+  const accessToken = await getAccessToken();
+  if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
 
   const response = await fetch(`${apiUrl}/api${path}`, { ...init, headers });
   
+  if (response.status === 401) throw new Error('Error 401: sesión expirada o token inválido');
+  if (response.status === 403) throw new Error('Error 403: no tienes permisos para esta acción');
   if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}`);
   if (response.status === 204) return undefined as T;
 

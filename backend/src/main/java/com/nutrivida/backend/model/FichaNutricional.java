@@ -28,6 +28,10 @@ public class FichaNutricional {
     @Column(length = 2000)
     private String pautaDetalle;
 
+    // Resultado del caso de uso Kafka "evaluación nutricional" (se completa de forma asíncrona)
+    private Double imc;
+    private String clasificacionImc;
+
     // Getters y Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -55,4 +59,8 @@ public class FichaNutricional {
     public void setGrasas(Integer grasas) { this.grasas = grasas; }
     public String getPautaDetalle() { return pautaDetalle; }
     public void setPautaDetalle(String pautaDetalle) { this.pautaDetalle = pautaDetalle; }
+    public Double getImc() { return imc; }
+    public void setImc(Double imc) { this.imc = imc; }
+    public String getClasificacionImc() { return clasificacionImc; }
+    public void setClasificacionImc(String clasificacionImc) { this.clasificacionImc = clasificacionImc; }
 }

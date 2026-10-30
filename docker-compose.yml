@@ -1,4 +1,49 @@
-version: '3.8'
+# Entorno local completo de Clínica NutriVida:
+#   MySQL · clúster RabbitMQ (3 nodos) · Zookeeper + 2 brokers Kafka · Kafka-UI
+#   backend (BFF, :5000) · admin-service (:5001) · frontend (:80)
+#
+# Uso:  docker compose up -d --build
+#   RabbitMQ Management -> http://localhost:15672  (admin / admin123)
+#   Kafka-UI            -> http://localhost:8080
+
+# Los 3 nodos arrancan en paralelo: el peer discovery elige el nodo semilla y forma el clúster
+x-rabbitmq-node: &rabbitmq-node
+  image: rabbitmq:4.2-management
+  environment:
+    RABBITMQ_DEFAULT_USER: admin
+    RABBITMQ_DEFAULT_PASS: admin123
+    RABBITMQ_COOKIE: nutrivida-cluster-cookie
+  # Todos los nodos comparten la misma Erlang cookie para poder formar el clúster
+  entrypoint:
+    - /bin/bash
+    - -c
+    - >-
+      echo -n "$$RABBITMQ_COOKIE" > /var/lib/rabbitmq/.erlang.cookie &&
+      chown rabbitmq:rabbitmq /var/lib/rabbitmq/.erlang.cookie &&
+      chmod 400 /var/lib/rabbitmq/.erlang.cookie &&
+      exec docker-entrypoint.sh rabbitmq-server
+  networks:
+    - nutrivida-network
+  healthcheck:
+    test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+    interval: 10s
+    timeout: 10s
+    retries: 12
+    start_period: 20s
+
+x-kafka-broker: &kafka-broker
+  image: confluentinc/cp-kafka:7.6.1
+  depends_on:
+    zookeeper:
+      condition: service_healthy
+  networks:
+    - nutrivida-network
+  healthcheck:
+    test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:29092 > /dev/null 2>&1"]
+    interval: 10s
+    timeout: 10s
+    retries: 12
+    start_period: 20s
 
 services:
   mysql-db:
@@ -21,25 +66,113 @@ services:
       timeout: 5s
       retries: 10
 
-  rabbitmq:
-    image: rabbitmq:4.2-management
-    container_name: rabbitmq
+  # ---------------- Clúster RabbitMQ ----------------
+  rabbitmq1:
+    <<: *rabbitmq-node
+    container_name: rabbitmq1
+    hostname: rabbitmq1
     ports:
       - "5672:5672"
-      - "15672:15672" 
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      - "15672:15672"
     volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq1_data:/var/lib/rabbitmq
+      - ./infra/rabbitmq/cluster.conf:/etc/rabbitmq/conf.d/20-cluster.conf:ro
+
+  rabbitmq2:
+    <<: *rabbitmq-node
+    container_name: rabbitmq2
+    hostname: rabbitmq2
+    ports:
+      - "5673:5672"
+    volumes:
+      - rabbitmq2_data:/var/lib/rabbitmq
+      - ./infra/rabbitmq/cluster.conf:/etc/rabbitmq/conf.d/20-cluster.conf:ro
+
+  rabbitmq3:
+    <<: *rabbitmq-node
+    container_name: rabbitmq3
+    hostname: rabbitmq3
+    ports:
+      - "5674:5672"
+    volumes:
+      - rabbitmq3_data:/var/lib/rabbitmq
+      - ./infra/rabbitmq/cluster.conf:/etc/rabbitmq/conf.d/20-cluster.conf:ro
+
+  # ---------------- Kafka: Zookeeper + brokers ----------------
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
     networks:
       - nutrivida-network
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      test: ["CMD-SHELL", "nc -z localhost 2181 || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
 
+  kafka1:
+    <<: *kafka-broker
+    container_name: kafka1
+    hostname: kafka1
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka1_data:/var/lib/kafka/data
+    environment: &kafka-env
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # INTERNAL: tráfico entre contenedores / EXTERNAL: acceso desde el host
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka1:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 2
+      KAFKA_MIN_INSYNC_REPLICAS: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 2
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+
+  kafka2:
+    <<: *kafka-broker
+    container_name: kafka2
+    hostname: kafka2
+    ports:
+      - "9093:9093"
+    volumes:
+      - kafka2_data:/var/lib/kafka/data
+    environment:
+      <<: *kafka-env
+      KAFKA_BROKER_ID: 2
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka2:29092,EXTERNAL://localhost:9093
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.2
+    container_name: kafka-ui
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: nutrivida
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka1:29092,kafka2:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+      DYNAMIC_CONFIG_ENABLED: "true"
+    depends_on:
+      kafka1:
+        condition: service_healthy
+      kafka2:
+        condition: service_healthy
+    networks:
+      - nutrivida-network
+
+  # ---------------- Microservicios ----------------
   backend:
     build:
       context: ./backend
@@ -51,14 +184,39 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/clinica_nutrivida?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       - SPRING_DATASOURCE_USERNAME=nutri_user
       - SPRING_DATASOURCE_PASSWORD=nutri_password
-      - SPRING_RABBITMQ_HOST=rabbitmq
-      - SPRING_RABBITMQ_PORT=5672
-      - SPRING_RABBITMQ_USERNAME=guest
-      - SPRING_RABBITMQ_PASSWORD=guest
+      - SPRING_RABBITMQ_ADDRESSES=rabbitmq1:5672,rabbitmq2:5672,rabbitmq3:5672
+      - SPRING_RABBITMQ_USERNAME=admin
+      - SPRING_RABBITMQ_PASSWORD=admin123
+      - APP_KAFKA_ENABLED=true
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka1:29092,kafka2:29092
     depends_on:
       mysql-db:
         condition: service_healthy
-      rabbitmq:
+      rabbitmq1:
+        condition: service_healthy
+      kafka1:
+        condition: service_healthy
+      kafka2:
+        condition: service_healthy
+    networks:
+      - nutrivida-network
+
+  admin-service:
+    build:
+      context: ./admin-service
+      dockerfile: Dockerfile
+    container_name: nutrivida-admin-service
+    ports:
+      - "5001:5001"
+    environment:
+      - SPRING_RABBITMQ_ADDRESSES=rabbitmq1:5672,rabbitmq2:5672,rabbitmq3:5672
+      - SPRING_RABBITMQ_USERNAME=admin
+      - SPRING_RABBITMQ_PASSWORD=admin123
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka1:29092,kafka2:29092
+    depends_on:
+      rabbitmq1:
+        condition: service_healthy
+      kafka1:
         condition: service_healthy
     networks:
       - nutrivida-network
@@ -67,6 +225,9 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # El frontend local consume el backend local
+        VITE_API_URL: http://localhost:5000
     container_name: nutrivida-frontend
     ports:
       - "80:80"
@@ -77,7 +238,12 @@ services:
 
 volumes:
   mysql_data:
-  rabbitmq_data:
+  rabbitmq1_data:
+  rabbitmq2_data:
+  rabbitmq3_data:
+  zookeeper_data:
+  kafka1_data:
+  kafka2_data:
 
 networks:
   nutrivida-network:

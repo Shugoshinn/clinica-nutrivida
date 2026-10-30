@@ -2,27 +2,19 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useIsAuthenticated, useMsal } from '@azure/msal-react';
 import { Link, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { clinicApi, type Ficha, type Nutricionista, type Reserva } from './api';
+import { ProtectedRoute } from './ProtectedRoute';
+import { roleOf } from './roles';
 import nutritionPhoto from './assets/img/foto2index.jpg';
 import consultationPhoto from './assets/img/imagen3index.jpg';
 import movementPhoto from './assets/img/images.jpg';
 import brandMark from './assets/img/Gemini_Generated_Image_iem1bjiem1bjiem1.png';
-
-type Role = 'Paciente' | 'Nutricionista' | 'Secretaria' | 'Administrador' | '';
-
-export function roleFor(email: string): Role {
-  const normalizedEmail = email.toLowerCase();
-  if (normalizedEmail === 'becerrajohan34@gmail.com') return 'Nutricionista';
-  if (normalizedEmail === 'luis.concha.d5@gmail.com') return 'Secretaria';
-  if (normalizedEmail === 'nicolasxd08@gmail.com') return 'Administrador';
-  return email ? 'Paciente' : '';
-}
 
 function Header() {
   const { instance, accounts } = useMsal();
   const isAuthenticated = useIsAuthenticated();
   const navigate = useNavigate();
   const account = accounts[0] ?? null;
-  const role = roleFor(account?.username ?? '');
+  const role = roleOf(account);
   const userName = account?.name ?? 'Usuario';
 
   async function signOut() {
@@ -92,7 +84,7 @@ function SiteLayout({ children }: { children: React.ReactNode }) {
 function HomePage() {
   const { accounts } = useMsal();
   const account = accounts[0] ?? null;
-  const role = roleFor(account?.username ?? '');
+  const role = roleOf(account);
   const userName = account?.name ?? '';
   const isAuthenticated = useIsAuthenticated();
   const [fichas, setFichas] = useState<Ficha[]>([]);
@@ -100,14 +92,15 @@ function HomePage() {
   const [nutritionists, setNutritionists] = useState<Nutricionista[]>([]);
   const [notice, setNotice] = useState('');
   const [reserva, setReserva] = useState<Reserva>({ tipoAtencion: '', modalidad: '', fecha: '', hora: '', pacienteNombre: '' });
-  const [nuevaFicha, setNuevaFicha] = useState<Ficha>({ pacienteRut: '', motivoConsulta: '', antecedentes: '', pesoActual: null });
+  const [nuevaFicha, setNuevaFicha] = useState<Ficha>({ pacienteRut: '', motivoConsulta: '', antecedentes: '', pesoActual: null, estatura: null });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    if (role !== 'Nutricionista') return;
     clinicApi.fichas()
       .then(setFichas)
       .catch((error: unknown) => console.error('Error al cargar fichas:', error));
-  }, []);
+  }, [role]);
 
   useEffect(() => {
     if (role === 'Secretaria') refreshReservations();
@@ -158,12 +151,16 @@ function HomePage() {
 
   async function submitFicha(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!nuevaFicha.pacienteRut || !nuevaFicha.pesoActual) return setNotice('El RUT y el peso son obligatorios.');
+    if (!nuevaFicha.pacienteRut || !nuevaFicha.pesoActual || !nuevaFicha.estatura) return setNotice('El RUT, el peso y la estatura son obligatorios.');
     try {
       await clinicApi.crearFicha(nuevaFicha);
-      setNotice('¡Ficha creada exitosamente!');
-      setNuevaFicha({ pacienteRut: '', motivoConsulta: '', antecedentes: '', pesoActual: null });
+      setNotice('¡Ficha creada! La evaluación nutricional (IMC) se calcula en segundo plano.');
+      setNuevaFicha({ pacienteRut: '', motivoConsulta: '', antecedentes: '', pesoActual: null, estatura: null });
       setFichas(await clinicApi.fichas());
+      // El consumidor Kafka completa el IMC de forma asíncrona; se refresca la tabla unos segundos después
+      window.setTimeout(() => {
+        clinicApi.fichas().then(setFichas).catch((error: unknown) => console.error('Error al cargar fichas:', error));
+      }, 3000);
     } catch (error) {
       console.error('Error al guardar la ficha:', error);
       setNotice('Hubo un error al guardar la ficha.');
@@ -245,8 +242,9 @@ function HomePage() {
         <label>Motivo de consulta<input required value={nuevaFicha.motivoConsulta} onChange={(event) => setNuevaFicha({ ...nuevaFicha, motivoConsulta: event.target.value })} /></label>
         <label>Antecedentes médicos<input value={nuevaFicha.antecedentes} onChange={(event) => setNuevaFicha({ ...nuevaFicha, antecedentes: event.target.value })} /></label>
         <label>Peso actual (kg)<input required min="1" type="number" value={nuevaFicha.pesoActual ?? ''} onChange={(event) => setNuevaFicha({ ...nuevaFicha, pesoActual: Number(event.target.value) || null })} /></label>
+        <label>Estatura (cm)<input required min="50" max="250" type="number" value={nuevaFicha.estatura ?? ''} onChange={(event) => setNuevaFicha({ ...nuevaFicha, estatura: Number(event.target.value) || null })} /></label>
         <button className="button button-green" type="submit">Guardar ficha <span>↗</span></button>
-      </form></section><section className="workspace-panel"><h2>Fichas registradas</h2><div className="table-scroll"><table><thead><tr><th>ID</th><th>RUT paciente</th><th>Motivo de consulta</th><th>Antecedentes</th></tr></thead><tbody>{fichas.map((ficha) => <tr key={ficha.id}><td>{ficha.id}</td><td>{ficha.pacienteRut}</td><td>{ficha.motivoConsulta}</td><td>{ficha.antecedentes}</td></tr>)}</tbody></table></div>{fichas.length === 0 && <p className="empty-state">No hay fichas disponibles.</p>}</section></main>}
+      </form></section><section className="workspace-panel"><h2>Fichas registradas</h2><div className="table-scroll"><table><thead><tr><th>ID</th><th>RUT paciente</th><th>Motivo de consulta</th><th>Antecedentes</th><th>Peso / estatura</th><th>IMC</th></tr></thead><tbody>{fichas.map((ficha) => <tr key={ficha.id}><td>{ficha.id}</td><td>{ficha.pacienteRut}</td><td>{ficha.motivoConsulta}</td><td>{ficha.antecedentes}</td><td>{ficha.pesoActual} kg{ficha.estatura ? ` / ${ficha.estatura} cm` : ''}</td><td>{ficha.imc ? <><strong>{ficha.imc}</strong> <small>{ficha.clasificacionImc}</small></> : 'En cálculo'}</td></tr>)}</tbody></table></div>{fichas.length === 0 && <p className="empty-state">No hay fichas disponibles.</p>}</section></main>}
 
       {isAuthenticated && role === 'Secretaria' && <main className="workspace content-section"><div className="section-heading"><div><p className="eyebrow">Área de recepción</p><h1>Reservas de pacientes</h1></div><button className="button button-green" onClick={refreshReservations}>Actualizar lista <span>↻</span></button></div><section className="workspace-panel"><div className="table-scroll"><table><thead><tr><th>Paciente</th><th>Fecha</th><th>Hora</th><th>Atención</th><th>Nutricionista</th><th>Acción</th></tr></thead><tbody>{reservas.map((item) => <tr key={item.id}><td>{item.pacienteNombre}</td><td>{item.fecha}</td><td>{item.hora}</td><td>{item.tipoAtencion}</td><td>{item.nutricionista ? <strong>{item.nutricionista}</strong> : <select aria-label={`Asignar nutricionista a ${item.pacienteNombre}`} value={item.nutricionistaTemp ?? ''} onChange={(event) => setReservas((current) => current.map((row) => row.id === item.id ? { ...row, nutricionistaTemp: event.target.value } : row))}><option value="">Selecciona</option>{nutritionists.map((nutritionist) => <option key={nutritionist.id} value={nutritionist.nombre}>{nutritionist.nombre}</option>)}</select>}</td><td>{item.nutricionista ? <span className="assigned">Asignado</span> : <button className="button button-small" onClick={() => assignNutritionist(item)}>Confirmar</button>}</td></tr>)}</tbody></table></div>{reservas.length === 0 && <p className="empty-state">No hay reservas por mostrar.</p>}</section></main>}
     </SiteLayout>
@@ -254,10 +252,6 @@ function HomePage() {
 }
 
 function AdminPage() {
-  const { accounts } = useMsal();
-  const isAuthenticated = useIsAuthenticated();
-  const account = accounts[0] ?? null;
-  const role = roleFor(account?.username ?? '');
   const [nutritionists, setNutritionists] = useState<Nutricionista[]>([]);
   const [reservas, setReservas] = useState<Reserva[]>([]);
   const [form, setForm] = useState({ nombre: '', especialidad: '', email: '' });
@@ -315,8 +309,6 @@ function AdminPage() {
       setNotice('No se pudo eliminar el nutricionista.');
     }
   }
-
-  if (!isAuthenticated || role !== 'Administrador') return <Navigate to="/" replace />;
 
   return (
     <SiteLayout>
@@ -427,7 +419,7 @@ function LoginPage() {
   async function signIn() {
     try {
       const accountInfo = await instance.loginPopup({ scopes: ['user.read'] });
-      const nextPath = roleFor(accountInfo.account.username ?? '') === 'Administrador' ? '/admin' : '/';
+      const nextPath = roleOf(accountInfo.account) === 'Administrador' ? '/admin' : '/';
       navigate(nextPath);
     } catch (loginError) {
       console.error('Error al iniciar sesión:', loginError);
@@ -439,5 +431,5 @@ function LoginPage() {
 }
 
 export default function App() {
-  return <Routes><Route path="/" element={<HomePage />} /><Route path="/admin" element={<AdminPage />} /><Route path="/iniciar-sesion" element={<LoginPage />} /><Route path="*" element={<Navigate to="/" replace />} /></Routes>;
+  return <Routes><Route path="/" element={<HomePage />} /><Route path="/admin" element={<ProtectedRoute roles={['Administrador']}><AdminPage /></ProtectedRoute>} /><Route path="/iniciar-sesion" element={<LoginPage />} /><Route path="*" element={<Navigate to="/" replace />} /></Routes>;
 }

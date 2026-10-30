@@ -1,5 +1,9 @@
 package com.nutrivida.backend.service;
 
+import com.nutrivida.backend.messaging.ClinicaEventPublisher;
+import com.nutrivida.backend.messaging.event.FichaEvent;
+import com.nutrivida.backend.messaging.event.ReservaEvent;
+import com.nutrivida.backend.messaging.event.ReservaEvent.TipoEvento;
 import com.nutrivida.backend.model.FichaNutricional;
 import com.nutrivida.backend.model.Nutricionista;
 import com.nutrivida.backend.model.Reserva;
@@ -25,11 +29,15 @@ public class ClinicaService {
     @Autowired
     private NutricionistaRepository nutricionistaRepository;
 
-    // 1. Inyectamos tu productor de RabbitMQ
+    // Publicador de eventos (RabbitMQ y Kafka), aislado de la lógica de negocio
     @Autowired
-    private ReservaProducer reservaProducer;
+    private ClinicaEventPublisher eventPublisher;
 
     public Reserva guardarReserva(Reserva reserva) {
+        return validarYGuardar(reserva, TipoEvento.CREADA);
+    }
+
+    private Reserva validarYGuardar(Reserva reserva, TipoEvento tipoEvento) {
         LocalDate hoy = LocalDate.now();
         
         // Validación de fecha no anterior al día actual
@@ -46,10 +54,8 @@ public class ClinicaService {
         // 2. Guardamos la reserva en la base de datos
         Reserva reservaGuardada = reservaRepository.save(reserva);
 
-        // 3. Disparamos el mensaje a RabbitMQ usando tu productor
-        String mensaje = "Nueva reserva creada para el paciente: " + reservaGuardada.getPacienteNombre() 
-                       + " con el especialista " + reservaGuardada.getNutricionistaNombre();
-        reservaProducer.enviarNotificacionReserva(mensaje);
+        // 3. Publicamos el evento de dominio (RabbitMQ y, si está habilitado, Kafka)
+        eventPublisher.publicarReserva(ReservaEvent.from(reservaGuardada, tipoEvento));
 
         return reservaGuardada;
     }
@@ -63,8 +69,8 @@ public class ClinicaService {
         reserva.setModalidad(nuevosDatos.getModalidad());
         reserva.setNutricionistaNombre(nuevosDatos.getNutricionistaNombre());
         
-        // Al llamar a guardarReserva, también disparará un mensaje a RabbitMQ por el reagendamiento
-        return guardarReserva(reserva);
+        // Valida y publica el evento de reagendamiento
+        return validarYGuardar(reserva, TipoEvento.REAGENDADA);
     }
 
     public List<Reserva> obtenerTodasLasReservas() {
@@ -72,7 +78,12 @@ public class ClinicaService {
     }
 
     public FichaNutricional guardarFicha(FichaNutricional ficha) {
-        return fichaRepository.save(ficha);
+        // El IMC lo calcula de forma asíncrona el consumidor Kafka de fichas
+        ficha.setImc(null);
+        ficha.setClasificacionImc(null);
+        FichaNutricional fichaGuardada = fichaRepository.save(ficha);
+        eventPublisher.publicarFicha(FichaEvent.from(fichaGuardada));
+        return fichaGuardada;
     }
 
     public List<FichaNutricional> listarFichas() {

@@ -1,10 +1,17 @@
 package com.nutrivida.backend.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.amqp.core.*;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.boot.autoconfigure.amqp.RabbitTemplateCustomizer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Topología de RabbitMQ (colas, exchanges y bindings) declarada desde la configuración centralizada
+ * de application.yml. La lógica de negocio no conoce estos nombres.
+ */
 @Configuration
 public class RabbitMQConfig {
 
@@ -59,5 +66,12 @@ public class RabbitMQConfig {
     @Bean
     public Binding reservaBinding(Queue reservaQueuePrincipal, TopicExchange reservaExchangePrincipal) {
         return BindingBuilder.bind(reservaQueuePrincipal).to(reservaExchangePrincipal).with(reservaRoutingKey);
+    }
+
+    // --- 3. SERIALIZACIÓN JSON DE LOS EVENTOS (DTO tipado) ---
+    // Solo en el productor: los consumidores reciben los bytes y deciden ACK/NACK aunque el mensaje no sea JSON válido
+    @Bean
+    public RabbitTemplateCustomizer jsonRabbitTemplateCustomizer(ObjectMapper objectMapper) {
+        return rabbitTemplate -> rabbitTemplate.setMessageConverter(new Jackson2JsonMessageConverter(objectMapper));
     }
 }
