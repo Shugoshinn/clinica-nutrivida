@@ -178,9 +178,13 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: nutrivida-backend
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     ports:
       - "5000:5000"
     environment:
+      - JAVA_TOOL_OPTIONS=-Djava.net.preferIPv4Stack=true
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/clinica_nutrivida?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       - SPRING_DATASOURCE_USERNAME=nutri_user
       - SPRING_DATASOURCE_PASSWORD=nutri_password
@@ -206,9 +210,13 @@ services:
       context: ./admin-service
       dockerfile: Dockerfile
     container_name: nutrivida-admin-service
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     ports:
       - "5001:5001"
     environment:
+      - JAVA_TOOL_OPTIONS=-Djava.net.preferIPv4Stack=true
       - SPRING_RABBITMQ_ADDRESSES=rabbitmq1:5672,rabbitmq2:5672,rabbitmq3:5672
       - SPRING_RABBITMQ_USERNAME=admin
       - SPRING_RABBITMQ_PASSWORD=admin123
