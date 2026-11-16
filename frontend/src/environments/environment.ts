@@ -5,7 +5,7 @@ const clientId = import.meta.env.VITE_AZURE_CLIENT_ID || 'db5f13af-8b1a-4d80-994
 export const environment = {
   production: import.meta.env.PROD,
   // URL del API Gateway (AWS) que enruta hacia el BFF Spring Boot
-  apiUrl: 'http://localhost:5000',
+  apiUrl: import.meta.env.VITE_API_URL || 'https://p7yzjk09rj.execute-api.us-east-1.amazonaws.com',
   msalConfig: {
     clientId,
     authority: `https://login.microsoftonline.com/${tenantId}`
