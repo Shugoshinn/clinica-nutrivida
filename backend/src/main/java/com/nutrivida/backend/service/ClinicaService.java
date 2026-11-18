@@ -69,10 +69,10 @@ public class ClinicaService {
         reserva.setModalidad(nuevosDatos.getModalidad());
         reserva.setNutricionistaNombre(nuevosDatos.getNutricionistaNombre());
 
-        if (nuevosDatos.getEstado() != null && !nuevosDatos.getEstado().isBlank()) {
-            reserva.setEstado(nuevosDatos.getEstado());
-        } else if (nuevosDatos.getNutricionistaNombre() != null && !nuevosDatos.getNutricionistaNombre().isBlank()) {
+        if (nuevosDatos.getNutricionistaNombre() != null && !nuevosDatos.getNutricionistaNombre().isBlank()) {
             reserva.setEstado("Confirmada");
+        } else if (nuevosDatos.getEstado() != null && !nuevosDatos.getEstado().isBlank()) {
+            reserva.setEstado(nuevosDatos.getEstado());
         }
 
         TipoEvento tipo = "Confirmada".equalsIgnoreCase(reserva.getEstado())
