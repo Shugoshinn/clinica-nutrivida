@@ -21,7 +21,7 @@ public record ReservaEvent(
         String estado,
         Instant ocurridoEn) {
 
-    public enum TipoEvento { CREADA, REAGENDADA }
+    public enum TipoEvento { CREADA, REAGENDADA, CONFIRMADA }
 
     public static ReservaEvent from(Reserva reserva, TipoEvento tipoEvento) {
         return new ReservaEvent(

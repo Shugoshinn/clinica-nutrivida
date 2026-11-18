@@ -68,9 +68,19 @@ public class ClinicaService {
         reserva.setHora(nuevosDatos.getHora());
         reserva.setModalidad(nuevosDatos.getModalidad());
         reserva.setNutricionistaNombre(nuevosDatos.getNutricionistaNombre());
+
+        if (nuevosDatos.getEstado() != null && !nuevosDatos.getEstado().isBlank()) {
+            reserva.setEstado(nuevosDatos.getEstado());
+        } else if (nuevosDatos.getNutricionistaNombre() != null && !nuevosDatos.getNutricionistaNombre().isBlank()) {
+            reserva.setEstado("Confirmada");
+        }
+
+        TipoEvento tipo = "Confirmada".equalsIgnoreCase(reserva.getEstado())
+                ? TipoEvento.CONFIRMADA
+                : TipoEvento.REAGENDADA;
         
         // Valida y publica el evento de reagendamiento
-        return validarYGuardar(reserva, TipoEvento.REAGENDADA);
+        return validarYGuardar(reserva, tipo);
     }
 
     public List<Reserva> obtenerTodasLasReservas() {
